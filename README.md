@@ -1,8 +1,10 @@
-# setup.sh
+# setup
 
 ```
 curl -fsSL https://raw.githubusercontent.com/Pikka2048/setup/refs/heads/main/setup.sh | bash
 ```
+
+※ Debian系環境のみ対応
 
 ## セットアップ出来るもの
 
