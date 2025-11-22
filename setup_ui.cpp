@@ -29,13 +29,13 @@ void draw_menu(const std::vector<MenuItem>& items, int highlight) {
     getmaxyx(stdscr, h, w);
 
     // タイトル
-    std::string title = "=== 環境構築セットアップウィザード ===";
+    std::string title = "=== Environment Setup Wizard ===";
     attron(COLOR_PAIR(1) | A_BOLD);
-    mvprintw(1, (w - 40) / 2, "%s", title.c_str()); 
+    mvprintw(1, (w - 40) / 2, "%s", title.c_str());
     attroff(COLOR_PAIR(1) | A_BOLD);
 
     // 操作説明
-    mvprintw(3, 2, "Space: 選択切り替え | Enter: 決定して実行 | q: 中止");
+    mvprintw(3, 2, "Space: Toggle | Enter: Run | q: Quit");
 
     // リスト描画
     for (size_t i = 0; i < items.size(); ++i) {
@@ -43,10 +43,10 @@ void draw_menu(const std::vector<MenuItem>& items, int highlight) {
         if (i == highlight) {
             attron(A_REVERSE);
         }
-        
+
         // [x] or [ ]
         mvprintw(y, 4, "[%c] %s", items[i].selected ? 'x' : ' ', items[i].label.c_str());
-        
+
         if (i == highlight) {
             attroff(A_REVERSE);
         }
@@ -67,17 +67,17 @@ int main(int argc, char* argv[]) {
     // 2. ホームディレクトリの取得
     const char* home_env = std::getenv("HOME");
     if (!home_env) {
-        std::cerr << "Error: HOME環境変数が設定されていません。" << std::endl;
+        std::cerr << "Error: HOME environment variable is not set." << std::endl;
         return 1;
     }
     std::string home_dir = std::string(home_env);
 
     // 3. メニュー項目の定義
     std::vector<MenuItem> items = {
-        {"Neovim (LTS) をソースからビルド", false},
-        {"Screen をソースからビルド", false},
-        {"Node.js & npm をインストール (nを使用)", false},
-        {"設定ファイルを上書きコピー (nvim, screen, bash)", false}
+        {"Build Neovim (LTS) from source", false},
+        {"Build Screen from source", false},
+        {"Install Node.js & npm (via n)", false},
+        {"Overwrite config files (nvim, screen, bash)", false}
     };
 
     bool auto_mode = false;
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
         for (auto &item : items) {
             item.selected = true;
         }
-        std::cout << "=== 自動実行モード(--all)を検出: 全項目を実行します ===" << std::endl;
+        std::cout << "=== Auto-mode (--all) detected: Running all tasks ===" << std::endl;
     }
 
     // --- UIモード (自動モードでない場合) ---
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
         cbreak();
         noecho();
         keypad(stdscr, TRUE);
-        curs_set(0); 
+        curs_set(0);
 
         if (has_colors()) {
             start_color();
@@ -120,40 +120,40 @@ int main(int argc, char* argv[]) {
                 case KEY_DOWN:
                     if (highlight < items.size() - 1) highlight++;
                     break;
-                case ' ': 
+                case ' ':
                     items[highlight].selected = !items[highlight].selected;
                     break;
-                case 10: 
+                case 10:
                     execute = true;
                     goto end_ui;
-                case 'q': 
+                case 'q':
                     execute = false;
                     goto end_ui;
             }
         }
         end_ui:
-        endwin(); 
+        endwin();
     }
 
     if (!execute) {
-        std::cout << "操作がキャンセルされました。" << std::endl;
+        std::cout << "Operation cancelled." << std::endl;
         return 0;
     }
 
-    std::cout << "\n=== セットアップ処理を開始します ===\n" << std::endl;
+    std::cout << "\n=== Starting Setup Process ===\n" << std::endl;
 
     // 1. システム要件チェック (apt)
     if (!run_command("command -v apt > /dev/null")) {
-        std::cerr << "[Error] Debian系以外は対応していません (aptが見つかりません)。" << std::endl;
+        std::cerr << "[Error] Non-Debian system detected (apt not found)." << std::endl;
         return 1;
     }
 
     // 2. Gitの確認とインストール
-    std::cout << "[System] Git環境を確認中..." << std::endl;
+    std::cout << "[System] Checking Git environment..." << std::endl;
     if (!run_command("command -v git > /dev/null")) {
-        std::cout << "[System] Gitをインストールします..." << std::endl;
+        std::cout << "[System] Installing Git..." << std::endl;
         if (!run_command("sudo apt update && sudo apt install -y git")) {
-            std::cerr << "[Error] Gitのインストールに失敗しました。" << std::endl;
+            std::cerr << "[Error] Failed to install Git." << std::endl;
             return 1;
         }
     }
@@ -161,31 +161,31 @@ int main(int argc, char* argv[]) {
 
     // 3. リポジトリのクローン
     std::string setup_dir = home_dir + "/setup";
-    
+
     // 既存ディレクトリの削除
     if (run_command("[ -d \"" + setup_dir + "\" ]")) {
-        std::cout << "[Git] 既存の 'setup' ディレクトリを削除して再クローンします..." << std::endl;
+        std::cout << "[Git] Removing existing 'setup' directory and re-cloning..." << std::endl;
         run_command("rm -rf " + setup_dir);
     }
 
-    std::cout << "[Git] GitHubからクローン中..." << std::endl;
+    std::cout << "[Git] Cloning from GitHub..." << std::endl;
     if (!run_command("git clone https://github.com/Pikka2048/setup " + setup_dir)) {
-        std::cerr << "[Error] git clone に失敗しました。" << std::endl;
+        std::cerr << "[Error] git clone failed." << std::endl;
         return 1;
     }
 
     // ディレクトリ移動
     if (chdir(setup_dir.c_str()) != 0) {
-        std::cerr << "[Error] setupディレクトリへの移動に失敗しました。" << std::endl;
+        std::cerr << "[Error] Failed to change directory to 'setup'." << std::endl;
         return 1;
     }
-    std::cout << "[OK] クローン完了。選択されたタスクを実行します。\n" << std::endl;
+    std::cout << "[OK] Clone complete. Executing selected tasks.\n" << std::endl;
 
     // 4. 選択タスクの実行
 
     // --- Task 1: Neovim ---
     if (items[0].selected) {
-        std::cout << "\n>>> [Task] Neovim (LTS) のビルドを実行中..." << std::endl;
+        std::cout << "\n>>> [Task] Building Neovim (LTS)..." << std::endl;
         if (run_command("bash build_nvim_lts.sh")) {
             std::cout << ">>> [Success] Neovim build finished." << std::endl;
         } else {
@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
 
     // --- Task 2: Screen ---
     if (items[1].selected) {
-        std::cout << "\n>>> [Task] Screen のビルドを実行中..." << std::endl;
+        std::cout << "\n>>> [Task] Building Screen..." << std::endl;
         if (run_command("bash build_screen.sh")) {
             std::cout << ">>> [Success] Screen build finished." << std::endl;
         } else {
@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) {
 
     // --- Task 3: Node.js ---
     if (items[2].selected) {
-        std::cout << "\n>>> [Task] Node.js のインストールを実行中..." << std::endl;
+        std::cout << "\n>>> [Task] Installing Node.js..." << std::endl;
         if (run_command("bash install_nodejs.sh")) {
             std::cout << ">>> [Success] Node.js installation finished." << std::endl;
         } else {
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
 
     // --- Task 4: Config Files ---
     if (items[3].selected) {
-        std::cout << "\n>>> [Task] 設定ファイルをコピー中..." << std::endl;
+        std::cout << "\n>>> [Task] Copying configuration files..." << std::endl;
         if (run_command("bash copy_setting.sh")){
             std::cout << ">>> [Success] Setting files copy finished." << std::endl;
         } else{
@@ -232,11 +232,11 @@ int main(int argc, char* argv[]) {
     }
 
     // 5. クリーンアップ
-    std::cout << "\n[Cleanup] 作業用ディレクトリを削除します..." << std::endl;
+    std::cout << "\n[Cleanup] Removing temporary directory..." << std::endl;
     chdir(home_dir.c_str()); // ホームに戻る
     run_command("rm -rf " + setup_dir);
 
-    std::cout << "\n=== すべての処理が終了しました ===" << std::endl;
+    std::cout << "\n=== All processes finished ===" << std::endl;
 
     return 0;
 }
