@@ -69,13 +69,9 @@ esac
 read -p "設定ファイルを上書きコピーしますか？ (y/N): " CONFIRM
 case "$CONFIRM" in
     [yY]*)
-    echo "設定ファイルのコピーを開始します。"
-    mkdir -p ~/.config/nvim
-    cp init.lua ~/.config/nvim/
-    cp coc-settings.json ~/.config/nvim/
-    cp .screenrc ~/
-    cp .bash_aliases ~/
-    ;;
+        echo "設定ファイルのコピーを開始します。"
+        bash copy_setting.sh
+       ;;
     *) 
         echo "実行しません。"
         ;;
