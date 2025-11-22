@@ -32,6 +32,7 @@ case "$CONFIRM" in
     [yY]*) 
         echo "処理を実行します..."
         bash build_nvim_lts.sh
+        ;;
     *) 
         echo "実行しません。"
         ;;
@@ -42,6 +43,7 @@ case "$CONFIRM" in
     [yY]*) 
         echo "処理を実行します..."
         bash build_screen.sh
+        ;;
     *) 
         echo "実行しません。"
         ;;
@@ -52,6 +54,7 @@ case "$CONFIRM" in
     [yY]*) 
         echo "処理を実行します..."
         bash install_nodejs.sh
+        ;;
     *) 
         echo "実行しません。"
         ;;
