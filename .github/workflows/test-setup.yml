@@ -6,7 +6,7 @@ on:
     branches: [ "main" ]
     # 以下のファイルに変更があれば実行される。
     paths:
-      - 'setup.sh'
+      - 'setup_ui.cpp'
       - '*.sh'
       - '.github/workflows/**'
 
@@ -36,6 +36,9 @@ jobs:
 
       - name: Test 1
         run: ldd setup_tool
+
+      - name: Run test
+        run: chmod +x setup_tool && ./setup_tool --all
      
       - name: Release binary
         uses: softprops/action-gh-release@v2
