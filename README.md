@@ -1,4 +1,4 @@
-# setup
+# 自分用環境構築セットアップウイザード
 
 ```
 wget -q https://github.com/Pikka2048/setup/releases/download/latest/setup_tool && chmod +x setup_tool && ./setup_tool
