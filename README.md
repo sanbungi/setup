@@ -1,7 +1,7 @@
 # setup
 
 ```
-bash <(curl -fsSL https://raw.githubusercontent.com/Pikka2048/setup/main/setup.sh)
+wget -q https://github.com/Pikka2048/setup/releases/download/latest/setup_tool && chmod +x setup_tool && ./setup_tool
 ```
 
 ※ Debian系環境のみ対応
