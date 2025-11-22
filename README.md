@@ -1,7 +1,7 @@
 # setup
 
 ```
-curl -fsSL https://raw.githubusercontent.com/Pikka2048/setup/refs/heads/main/setup.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Pikka2048/setup/main/setup.sh)
 ```
 
 ※ Debian系環境のみ対応
