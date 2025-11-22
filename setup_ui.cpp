@@ -77,7 +77,8 @@ int main(int argc, char* argv[]) {
         {"Build Neovim (LTS) from source", false},
         {"Build Screen from source", false},
         {"Install Node.js & npm (via n)", false},
-        {"Overwrite config files (nvim, screen, bash)", false}
+        {"Install Ruby & gem (via rbenv)", false},
+        {"Overwrite config files (nvim, screen, bash)", false},
     };
 
     bool auto_mode = false;
@@ -219,8 +220,20 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] Node.js" << std::endl;
     }
 
-    // --- Task 4: Config Files ---
+    // --- Task 4: Ruby ---
     if (items[3].selected) {
+        std::cout << "\n>>> [Task] Installing Ruby..." << std::endl;
+        if (run_command("bash install_ruby.sh")) {
+            std::cout << ">>> [Success] Ruby installation finished." << std::endl;
+        } else {
+            std::cerr << ">>> [Error] Ruby installation failed." << std::endl;
+        }
+    } else {
+        std::cout << "--- [Skip] Ruby" << std::endl;
+    }
+
+    // --- Task 5: Config Files ---
+    if (items[4].selected) {
         std::cout << "\n>>> [Task] Copying configuration files..." << std::endl;
         if (run_command("bash copy_setting.sh")){
             std::cout << ">>> [Success] Setting files copy finished." << std::endl;

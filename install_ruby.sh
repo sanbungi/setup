@@ -14,4 +14,6 @@ source ~/.bashrc
 
 rbenv install $(rbenv install -l | grep -v - | tail -1)
 
+sudo gem install solargraph
+
 ruby -v
