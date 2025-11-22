@@ -24,7 +24,7 @@ fi
 echo "githubからクローン"
 cd ~
 git clone https://github.com/Pikka2048/setup
-cd setup.sh
+cd setup
 echo "クローン OK"
 
 read -p "nvimのLTSをソースからビルドしますか？ (y/N): " CONFIRM
