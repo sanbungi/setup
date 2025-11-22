@@ -15,6 +15,7 @@ https://github.com/user-attachments/assets/88591fe0-68d1-47ab-b0bc-ef55b4f6b1c6
 - neovimのLTSをソースからビルド
 - screenコマンドをソースからビルド（neovim色バグ対策）
 - Node.jsとnpmをnコマンドでLTSをインストール（coc-nvim用）
+- RubyとGemをrbenvで最新バージョンをインストール、solargraph言語サーバーもインストール
 - 設定ファイルを自動配置
 
 その後nvimを開くことにより、プラグインは自動DL
