@@ -27,7 +27,7 @@ git clone https://github.com/Pikka2048/setup
 cd setup
 echo "クローン OK"
 
-read -p "nvimのLTSをソースからビルドしますか？ (y/N): " CONFIRM
+read -p "nvimのLTSをソースからビルドしますか？ (y/N): " CONFIRM < /dev/tty
 case "$CONFIRM" in
     [yY]*)
         echo "処理を実行します..."
@@ -38,7 +38,7 @@ case "$CONFIRM" in
         ;;
 esac
 
-read -p "screenをソースからビルドしますか？ (y/N): " CONFIRM
+read -p "screenをソースからビルドしますか？ (y/N): " CONFIRM < /dev/tty
 case "$CONFIRM" in
     [yY]*)
         echo "処理を実行します..."
@@ -49,7 +49,7 @@ case "$CONFIRM" in
         ;;
 esac
 
-read -p "nodejsとnpmをnコマンドでインストールしますか？ (y/N): " CONFIRM
+read -p "nodejsとnpmをnコマンドでインストールしますか？ (y/N): " CONFIRM < /dev/tty
 case "$CONFIRM" in
     [yY]*)
         echo "処理を実行します..."
@@ -60,7 +60,7 @@ case "$CONFIRM" in
         ;;
 esac
 
-read -p "設定ファイルを上書きコピーしますか？ (y/N): " CONFIRM
+read -p "設定ファイルを上書きコピーしますか？ (y/N): " CONFIRM < /dev/tty
 case "$CONFIRM" in
     [yY]*)
     echo "設定ファイルのコピーを開始します。"
