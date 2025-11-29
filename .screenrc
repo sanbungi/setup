@@ -7,3 +7,9 @@ defbce on
 truecolor on
 
 termcapinfo xterm*|vte*|gnome*|alacritty* Tc:Cc=\E[%?%p1%{2}%<%t4%p1%d%e48;2;%p2%d;%p3%d;%p4%d%;m
+
+# ウインドウ1から始めることで、切り替えを押しやすく
+bind c screen 1
+bind ^c screen 1
+bind 0 select 10                                                            
+screen 1
