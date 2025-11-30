@@ -24,6 +24,8 @@ alias gs='git status'
 alias ga='git add .'
 alias gc='git commit -m'
 alias gp='git push'
+alias gl='git log'
+alias gitaddreset='git restore --staged .'
 
 # nodejs
 alias npdev='npm run dev'
