@@ -78,6 +78,11 @@ local opts3 = { silent = true }
 keymap("i", "<C-n>", "<Plug>(coc-next)", opts3) -- 下候補へ
 keymap("i", "<C-p>", "<Plug>(coc-prev)", opts3) -- 上候補へ
 
+-- screenとの干渉対策
+if vim.env.TERM:match("^screen") then
+	vim.opt.laststatus = 0
+end
+
 require("lazy").setup({
 	{
 		"navarasu/onedark.nvim",

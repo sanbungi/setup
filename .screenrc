@@ -19,9 +19,4 @@ termcapinfo xterm* ti@:te@
 # スクロールバックの行数を増やす
 defscrollback 10000
 
-# ステータスライン
-hardstatus alwayslastline
-hardstatus string "%{= .b}%{W} %-w%{=u Yk} [%n %t] %{-}%{W}%+w %=%{c} [%H] %{W}%Y-%m-%d %c "
-
-rendition so = dd
-sorendition "+b gW"
+caption always "%{= .b}%{W} %-w%{=u Yk} [%n %t] %{-}%{W}%+w %=%{c} [%H] %{W}%Y-%m-%d %c "
