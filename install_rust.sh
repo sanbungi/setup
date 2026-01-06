@@ -8,7 +8,6 @@ if ! grep -q "\.cargo/env" ~/.profile; then
   echo 'source "$HOME/.cargo/env"' >> ~/.profile
 fi
 
-# 現在のシェルでも使えるように
 source "$HOME/.cargo/env"
 
 rustc --version
