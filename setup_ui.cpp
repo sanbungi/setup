@@ -79,6 +79,7 @@ int main(int argc, char* argv[]) {
         {"Install Node.js & npm (via n)", false},
         {"Install Ruby & gem (via rbenv)", false},
         {"Install Golang (from apt repo) & LSP", false},
+        {"Install Rust (via rustup)", false},
         {"Overwrite config files (nvim, screen, bash)", false},
     };
 
@@ -245,8 +246,20 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] Golang" << std::endl;
     }
 
-    // --- Task 6: Config Files ---
+    // --- Task 6: Rust ---
     if (items[5].selected) {
+        std::cout << "\n>>> [Task] Installing Rust..." << std::endl;
+        if (run_command("bash install_rust.sh")) {
+            std::cout << ">>> [Success] Rust installation finished." << std::endl;
+        } else {
+            std::cerr << ">>> [Error] Rust installation failed." << std::endl;
+        }
+    } else {
+        std::cout << "--- [Skip] Rust" << std::endl;
+    }
+
+    // --- Task 7: Config Files ---
+    if (items[6].selected) {
         std::cout << "\n>>> [Task] Copying configuration files..." << std::endl;
         if (run_command("bash copy_setting.sh")){
             std::cout << ">>> [Success] Setting files copy finished." << std::endl;
