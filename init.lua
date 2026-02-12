@@ -1,14 +1,14 @@
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
-	vim.fn.system({
-		"git",
-		"clone",
-		"--filter=blob:none",
-		"https://github.com/folke/lazy.nvim.git",
-		"--branch=stable",
-		lazypath,
-	})
+        vim.fn.system({
+                "git",
+                "clone",
+                "--filter=blob:none",
+                "https://github.com/folke/lazy.nvim.git",
+                "--branch=stable",
+                lazypath,
+        })
 end
 
 vim.opt.rtp:prepend(lazypath)
@@ -19,8 +19,8 @@ opt.cursorline = true -- カーソル行をハイライト
 opt.termguicolors = true -- True Colorを使用
 
 if vim.fn.has("persistent_undo") == 1 then
-	vim.opt.undodir = vim.fn.expand("~/.cache/nvim/undo")
-	vim.opt.undofile = true
+        vim.opt.undodir = vim.fn.expand("~/.cache/nvim/undo")
+        vim.opt.undofile = true
 end
 
 opt.tabstop = 4 -- タブ文字の表示幅
@@ -80,71 +80,85 @@ keymap("i", "<C-p>", "<Plug>(coc-prev)", opts3) -- 上候補へ
 
 -- screenとの干渉対策
 if vim.env.TERM:match("^screen") then
-	vim.opt.laststatus = 0
+        vim.opt.laststatus = 0
 end
 
 require("lazy").setup({
-	{
-		"navarasu/onedark.nvim",
-		priority = 1000,
-		config = function()
-			require("onedark").setup({
-				style = "darker",
-			})
-			require("onedark").load()
-		end,
-	},
-	{
-		"stevearc/conform.nvim",
-		event = { "BufReadPre", "BufNewFile" },
-		keys = {
-			{
-				-- shift + alt + f (alt + F)
-				"<M-F>",
-				function()
-					require("conform").format({ lsp_fallback = true })
-				end,
-				desc = "Format with conform.nvim",
-			},
-		},
-		opts = {
-			format_on_save = {
-				lsp_fallback = true,
-				timeout_ms = 1000,
-			},
-			formatters_by_ft = {
-				lua = { "stylua" },
-				python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
-				go = { "goimports" },
-				rust = { "rustfmt" },
-				javascript = { "prettierd", "prettier", stop_after_first = true },
-				typescript = { "prettierd", "prettier", stop_after_first = true },
-				json = { "jq" },
-				yaml = { "yamlfmt" },
-				toml = { "taplo" },
-				html = { "prettierd", "prettier" },
-				css = { "prettierd", "prettier" },
-				markdown = { "prettierd", "prettier" },
-				sh = { "shfmt" },
-				sql = { "sqlfluff" },
-				xml = { "xmlformat" },
-				dockerfile = { "hadolint" },
-			},
-		},
-	},
-	{ "vim-jp/vimdoc-ja" },
-	{ "neoclide/coc.nvim", branch = "release" },
+        {
+                "navarasu/onedark.nvim",
+                priority = 1000,
+                config = function()
+                        require("onedark").setup({
+                                style = "darker",
+                        })
+                        require("onedark").load()
+                end,
+        },
+        {
+                "stevearc/conform.nvim",
+                event = { "BufReadPre", "BufNewFile" },
+                keys = {
+                        {
+                                -- shift + alt + f (alt + F)
+                                "<M-F>",
+                                function()
+                                        require("conform").format({ lsp_fallback = true })
+                                end,
+                                desc = "Format with conform.nvim",
+                        },
+                },
+                opts = {
+                        format_on_save = {
+                                lsp_fallback = true,
+                                timeout_ms = 1000,
+                        },
+                        formatters_by_ft = {
+                                lua = { "stylua" },
+                                python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
+                                go = { "goimports" },
+                                rust = { "rustfmt" },
+                                javascript = { "prettierd", "prettier", stop_after_first = true },
+                                typescript = { "prettierd", "prettier", stop_after_first = true },
+                                json = { "jq" },
+                                yaml = { "yamlfmt" },
+                                toml = { "taplo" },
+                                html = { "prettierd", "prettier" },
+                                css = { "prettierd", "prettier" },
+                                markdown = { "prettierd", "prettier" },
+                                sh = { "shfmt" },
+                                sql = { "sqlfluff" },
+                                xml = { "xmlformat" },
+                                dockerfile = { "hadolint" },
+                        },
+                },
+        },
+    {
+        'nvim-telescope/telescope.nvim', version = '*',
+        dependencies = {
+            'nvim-lua/plenary.nvim',
+            -- optional but recommended
+            { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
+        }
+    },
+        { "vim-jp/vimdoc-ja" },
+        { "neoclide/coc.nvim", branch = "release" },
 })
 
+local builtin = require('telescope.builtin')
+vim.keymap.set('n', '<leader>ff', builtin.find_files, { desc = 'Telescope find files' })
+vim.keymap.set('n', '<leader>fg', builtin.live_grep, { desc = 'Telescope live grep' })
+vim.keymap.set('n', '<leader>fb', builtin.buffers, { desc = 'Telescope buffers' })
+vim.keymap.set('n', '<leader>fh', builtin.help_tags, { desc = 'Telescope help tags' })
+
 vim.g.coc_global_extensions = {
-	"coc-tsserver",
-	"coc-pyright",
-	"coc-json",
-	"coc-html",
-	"coc-css",
-	"coc-go",
-	"coc-rust-analyzer",
-	"coc-lua",
-	"coc-solargraph",
-	"coc-go",
+        "coc-tsserver",
+        "coc-pyright",
+        "coc-json",
+        "coc-html",
+        "coc-css",
+        "coc-go",
+        "coc-rust-analyzer",
+        "coc-lua",
+        "coc-solargraph",
+        "coc-go",
 }
