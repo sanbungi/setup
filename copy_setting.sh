@@ -5,6 +5,7 @@ mkdir -p ~/.config/nvim
 cp init.lua ~/.config/nvim/
 cp coc-settings.json ~/.config/nvim/
 cp .screenrc ~/
+cp .tmux.conf ~/
 cp .bash_aliases ~/
 
 # .bash_funtionを読み込む設定を.bashrcに安全に追記

@@ -81,7 +81,8 @@ int main(int argc, char* argv[]) {
         {"Install Golang (from package repo) & LSP", false},
         {"Install Rust (via rustup)", false},
         {"Install Docker (via get.docker.com)", false},
-        {"Overwrite config files (nvim, screen, bash)", false},
+        {"Install tmux (terminal multiplexer)", false},
+        {"Overwrite config files (nvim, screen, tmux, bash)", false},
     };
 
     bool auto_mode = false;
@@ -279,8 +280,20 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] Docker" << std::endl;
     }
 
-    // --- Task 8: Config Files ---
+    // --- Task 8: tmux ---
     if (items[7].selected) {
+        std::cout << "\n>>> [Task] Installing tmux..." << std::endl;
+        if (run_command("bash install_tmux.sh")) {
+            std::cout << ">>> [Success] tmux installation finished." << std::endl;
+        } else {
+            std::cerr << ">>> [Error] tmux installation failed." << std::endl;
+        }
+    } else {
+        std::cout << "--- [Skip] tmux" << std::endl;
+    }
+
+    // --- Task 9: Config Files ---
+    if (items[8].selected) {
         std::cout << "\n>>> [Task] Copying configuration files..." << std::endl;
         if (run_command("bash copy_setting.sh")){
             std::cout << ">>> [Success] Setting files copy finished." << std::endl;
