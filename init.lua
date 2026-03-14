@@ -52,6 +52,10 @@ keymap("n", "<C-l>", "<C-w>l", opts)
 keymap("n", "<leader>n", "<cmd>bnext<CR>", opts)
 keymap("n", "<leader>p", "<cmd>bprevious<CR>", opts)
 
+for i = 1, 9 do
+    vim.keymap.set("n", "<leader>" .. i, ":buffer " .. i .. "<CR>")
+end
+
 -- screenとの干渉対策
 if vim.env.TERM:match("^screen") then
     vim.opt.laststatus = 0
@@ -348,6 +352,10 @@ require("lazy").setup({
             keymap("n", "<leader>fb", builtin.buffers, { desc = "Telescope buffers" })
             keymap("n", "<leader>fh", builtin.help_tags, { desc = "Telescope help tags" })
         end,
+    },
+    -- Git diff viewer
+    {
+        "sindrets/diffview.nvim",
     },
 
     -- 日本語ヘルプ
