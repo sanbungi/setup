@@ -61,6 +61,25 @@ if vim.env.TERM:match("^screen") then
     vim.opt.laststatus = 0
 end
 
+-- :qで現在のバッファだけ閉じようにる
+local function smart_close()
+    local bufs = vim.fn.getbufinfo({ buflisted = 1 })
+    if #bufs > 1 then
+        -- 複数バッファあり → 前バッファへ移動してから現バッファを削除
+        vim.cmd("bp | bd #")
+    else
+        -- 最後の1バッファ → 通常終了
+        vim.cmd("q")
+    end
+end
+
+-- cabbrev から呼び出すためグローバルに公開
+_G.SmartClose = smart_close
+
+-- :q を上書き（:q! や :qa! には影響しない）
+vim.cmd([[cabbrev <expr> q getcmdtype() == ':' && getcmdline() == 'q' ? 'lua SmartClose()' : 'q']])
+
+
 require("lazy").setup({
     -- カラースキーム
     {
@@ -275,6 +294,7 @@ require("lazy").setup({
                 }),
                 sources = cmp.config.sources({
                     { name = "nvim_lsp" },
+                    { name = "minuet" },
                     { name = "luasnip" },
                     { name = "buffer" },
                     { name = "path" },
@@ -283,7 +303,11 @@ require("lazy").setup({
                     completeopt = "menu,menuone,noinsert",
                 },
                 performance = {
+                    fetching_timeout = 2000,
                     max_view_entries = 50,
+                },
+                experimental = {
+                    ghost_text = false,
                 },
             })
         end,
@@ -294,6 +318,7 @@ require("lazy").setup({
         "L3MON4D3/LuaSnip",
         version = "v2.*",
     },
+
 
     -- Conform: フォーマッター
     {
@@ -356,6 +381,58 @@ require("lazy").setup({
     -- Git diff viewer
     {
         "sindrets/diffview.nvim",
+    },
+
+    -- minuet-ai: AI インライン補完
+    {
+        "milanglacier/minuet-ai.nvim",
+        cond = function()
+            return vim.env.OPENROUTER_API_KEY ~= nil and vim.env.OPENROUTER_API_KEY ~= ""
+        end,
+        dependencies = {
+            "nvim-lua/plenary.nvim",
+        },
+        config = function()
+            require("minuet").setup({
+                provider = "openai_compatible",
+                request_timeout = 3,
+                throttle = 2000,
+                debounce = 1000,
+                n_completions = 2,
+                context_window = 8000,
+                notify = "warn",
+                cmp = {
+                    enable_auto_complete = true,
+                },
+                -- virtual text（インラインゴーストテキスト）
+                virtualtext = {
+                    auto_trigger_ft = { "*" },
+                    auto_trigger_ignore_ft = { "TelescopePrompt", "mason", "lazy" },
+                    keymap = {
+                        accept = "<C-y>",         -- 補完全体を受け入れ
+                        accept_line = "<C-l>>",   -- 1行だけ受け入れ
+                        accept_n_lines = "<C-j>", -- N行受け入れ
+                        prev = "<C-p>",           -- 前の候補
+                        next = "<C-n>",           -- 次の候補
+                        dismiss = "<C-e>",        -- 候補を消す
+                    },
+                    show_on_completion_menu = false,
+                },
+                provider_options = {
+                    openai_compatible = {
+                        model = "google/gemini-2.5-flash-lite",
+                        end_point = "https://openrouter.ai/api/v1/chat/completions",
+                        api_key = "OPENROUTER_API_KEY",
+                        name = "Openrouter",
+                        stream = true,
+                        optional = {
+                            max_tokens = 56,
+                            top_p = 0.9,
+                        },
+                    },
+                },
+            })
+        end,
     },
 
     -- 日本語ヘルプ
