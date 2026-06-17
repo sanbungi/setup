@@ -79,6 +79,7 @@ int main(int argc, char* argv[]) {
         {"Install Node.js & npm (via n)", false},
         {"Install Ruby & gem (via rbenv)", false},
         {"Install Golang (from package repo) & LSP", false},
+        {"Install D language (DMD/DUB)", false},
         {"Install Rust (via rustup)", false},
         {"Install Docker (via get.docker.com)", false},
         {"Install tmux (terminal multiplexer)", false},
@@ -256,8 +257,20 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] Golang" << std::endl;
     }
 
-    // --- Task 6: Rust ---
+    // --- Task 6: D language ---
     if (items[5].selected) {
+        std::cout << "\n>>> [Task] Installing D language..." << std::endl;
+        if (run_command("bash install_dlang.sh")) {
+            std::cout << ">>> [Success] D language installation finished." << std::endl;
+        } else {
+            std::cerr << ">>> [Error] D language installation failed." << std::endl;
+        }
+    } else {
+        std::cout << "--- [Skip] D language" << std::endl;
+    }
+
+    // --- Task 7: Rust ---
+    if (items[6].selected) {
         std::cout << "\n>>> [Task] Installing Rust..." << std::endl;
         if (run_command("bash install_rust.sh")) {
             std::cout << ">>> [Success] Rust installation finished." << std::endl;
@@ -268,8 +281,8 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] Rust" << std::endl;
     }
 
-    // --- Task 7: Docker ---
-    if (items[6].selected) {
+    // --- Task 8: Docker ---
+    if (items[7].selected) {
         std::cout << "\n>>> [Task] Installing Docker..." << std::endl;
         if (run_command("bash install_docker.sh")) {
             std::cout << ">>> [Success] Docker installation finished." << std::endl;
@@ -280,8 +293,8 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] Docker" << std::endl;
     }
 
-    // --- Task 8: tmux ---
-    if (items[7].selected) {
+    // --- Task 9: tmux ---
+    if (items[8].selected) {
         std::cout << "\n>>> [Task] Installing tmux..." << std::endl;
         if (run_command("bash install_tmux.sh")) {
             std::cout << ">>> [Success] tmux installation finished." << std::endl;
@@ -292,8 +305,8 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] tmux" << std::endl;
     }
 
-    // --- Task 9: Config Files ---
-    if (items[8].selected) {
+    // --- Task 10: Config Files ---
+    if (items[9].selected) {
         std::cout << "\n>>> [Task] Copying configuration files..." << std::endl;
         if (run_command("bash copy_setting.sh")){
             std::cout << ">>> [Success] Setting files copy finished." << std::endl;

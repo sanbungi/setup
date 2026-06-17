@@ -120,6 +120,7 @@ require("lazy").setup({
                     "lua_ls",        -- Lua
                     "ruby_lsp",      -- Ruby
                     "clangd",        -- C/C++
+                    "serve_d",       -- D
                 },
                 automatic_installation = true,
             })
@@ -167,6 +168,7 @@ require("lazy").setup({
                 "lua_ls",
                 "ruby_lsp",
                 "clangd",
+                "serve_d",
             }
 
             vim.lsp.enable(servers)

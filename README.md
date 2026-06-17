@@ -19,6 +19,7 @@ https://github.com/user-attachments/assets/88591fe0-68d1-47ab-b0bc-ef55b4f6b1c6
 - Node.jsとnpmをnコマンドでLTSをインストール（coc-nvim用）
 - RubyとGemをrbenvで最新バージョンをインストール、solargraph言語サーバーもインストール
 - GolangをAPTリポジトリからインストール、gopls言語サーバーもインストール
+- D言語(DMD/DUB)を公式install.shでインストール、neovim LSPはserve-dに対応
 - 【NEW】Rustをrustupでインストール
 - 【NEW】Dockerをget.docker.comからインストール
 - 【NEW】tmuxをパッケージマネージャーからインストール
