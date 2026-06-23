@@ -29,6 +29,25 @@ else
     echo "git OK"
 fi
 
+echo "jqが使えるか確認します。"
+if ! command -v jq &> /dev/null; then
+    if [ "$PKG_MANAGER" = "apt" ]; then
+        sudo apt update && sudo apt install -y jq
+    else
+        sudo dnf install -y jq
+    fi
+
+    # インストールが成功したか確認
+    if command -v jq &> /dev/null; then
+        echo "jqのインストールが完了しました。"
+    else
+        echo "エラー: jqのインストールに失敗しました。"
+        exit 1
+    fi
+else
+    echo "jq OK"
+fi
+
 echo "githubからクローン"
 cd ~
 

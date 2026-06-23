@@ -10,5 +10,7 @@ fi
 
 source "$HOME/.cargo/env"
 
+rustup component add rustfmt
+
 rustc --version
 cargo --version
