@@ -85,6 +85,17 @@ case "$CONFIRM" in
         ;;
 esac
 
+read -p "jqをインストールしますか？ (y/N): " CONFIRM
+case "$CONFIRM" in
+    [yY]*)
+        echo "処理を実行します..."
+        bash install_jq.sh
+        ;;
+    *)
+        echo "実行しません。"
+        ;;
+esac
+
 read -p "設定ファイルを上書きコピーしますか？ (y/N): " CONFIRM
 case "$CONFIRM" in
     [yY]*)
