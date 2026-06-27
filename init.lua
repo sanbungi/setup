@@ -63,23 +63,113 @@ if vim.env.TERM:match("^screen") then
     vim.opt.laststatus = 0
 end
 
--- :qで現在のバッファだけ閉じようにる
+-- :q で現在のバッファだけ閉じる
+-- 最後の listed buffer なら通常の :q
 local function smart_close()
-    local bufs = vim.fn.getbufinfo({ buflisted = 1 })
-    if #bufs > 1 then
-        -- 複数バッファあり → 前バッファへ移動してから現バッファを削除
-        vim.cmd("bp | bd #")
+    local cur = vim.api.nvim_get_current_buf()
+    local cur_win = vim.api.nvim_get_current_win()
+
+    -- help / quickfix / nofile などは普通にウィンドウを閉じる
+    local buftype = vim.bo[cur].buftype
+    if buftype ~= "" and not vim.bo[cur].buflisted then
+        vim.cmd("close")
+        return
+    end
+
+    -- :q と同じく、未保存変更は勝手に捨てない
+    if vim.bo[cur].modified then
+        vim.notify(
+            "No write since last change. Use :w to save, or :q! to quit without saving.",
+            vim.log.levels.WARN
+        )
+        return
+    end
+
+    local listed = vim.tbl_filter(function(buf)
+        return buf ~= cur
+            and vim.api.nvim_buf_is_valid(buf)
+            and vim.bo[buf].buflisted
+    end, vim.api.nvim_list_bufs())
+
+    -- 他に listed buffer がなければ普通に終了
+    if #listed == 0 then
+        vim.cmd("quit")
+        return
+    end
+
+    local function usable(buf)
+        return buf
+            and buf > 0
+            and buf ~= cur
+            and vim.api.nvim_buf_is_valid(buf)
+            and vim.bo[buf].buflisted
+    end
+
+    -- まず alternate buffer を候補にする
+    local replacement = nil
+    local alt = vim.fn.bufnr("#")
+
+    if usable(alt) then
+        replacement = alt
     else
-        -- 最後の1バッファ → 通常終了
-        vim.cmd("q")
+        -- alternate が使えない時は、最近使った listed buffer を選ぶ
+        table.sort(listed, function(a, b)
+            local ia = vim.fn.getbufinfo(a)[1]
+            local ib = vim.fn.getbufinfo(b)[1]
+            return (ia and ia.lastused or 0) > (ib and ib.lastused or 0)
+        end)
+
+        replacement = listed[1]
+    end
+
+    if not replacement or not usable(replacement) then
+        vim.cmd("quit")
+        return
+    end
+
+    -- unloaded buffer の場合に備えてロードしておく
+    if not vim.api.nvim_buf_is_loaded(replacement) then
+        vim.fn.bufload(replacement)
+    end
+
+    -- 現在のバッファを表示している全ウィンドウを退避先に差し替える
+    -- これをしてから削除すると、split 構成が壊れにくい
+    for _, win in ipairs(vim.fn.win_findbuf(cur)) do
+        if vim.api.nvim_win_is_valid(win) then
+            pcall(vim.api.nvim_win_set_buf, win, replacement)
+        end
+    end
+
+    -- 元のウィンドウに戻す
+    if vim.api.nvim_win_is_valid(cur_win) then
+        pcall(vim.api.nvim_set_current_win, cur_win)
+    end
+
+    local ok, err = pcall(vim.api.nvim_buf_delete, cur, {
+        force = false,
+        unload = false,
+    })
+
+    if not ok then
+        vim.notify(err, vim.log.levels.WARN)
     end
 end
 
--- cabbrev から呼び出すためグローバルに公開
-_G.SmartClose = smart_close
+vim.api.nvim_create_user_command("SmartClose", smart_close, {})
 
--- :q を上書き（:q! や :qa! には影響しない）
-vim.cmd([[cabbrev <expr> q getcmdtype() == ':' && getcmdline() == 'q' ? 'lua SmartClose()' : 'q']])
+-- cabbrev ではなく、Enter 時にコマンド全体を見る
+-- これなら :q! や :qa! に誤爆しない
+vim.keymap.set("c", "<CR>", function()
+    if vim.fn.getcmdtype() == ":" then
+        local cmd = vim.fn.getcmdline()
+
+        if cmd:match("^%s*q%s*$") then
+            return vim.api.nvim_replace_termcodes("<C-u>SmartClose<CR>", true, false, true)
+        end
+    end
+
+    return vim.api.nvim_replace_termcodes("<CR>", true, false, true)
+end, { expr = true, noremap = true })
 
 -- serve_dの依存関係を自動で取得
 vim.lsp.config("serve_d", {
