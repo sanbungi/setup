@@ -157,6 +157,54 @@ end
 
 vim.api.nvim_create_user_command("SmartClose", smart_close, {})
 
+
+-- セッション保存
+
+vim.o.sessionoptions = table.concat({
+    "buffers",
+    "curdir",
+    "folds",
+    "help",
+    "tabpages",
+    "winsize",
+    "terminal",
+    "localoptions",
+}, ",")
+
+local session_dir = vim.fn.stdpath("state") .. "/sessions"
+vim.fn.mkdir(session_dir, "p")
+
+local function session_file()
+    local cwd = vim.loop.cwd() or vim.fn.getcwd()
+    return session_dir .. "/" .. vim.fn.sha256(cwd) .. ".vim"
+end
+
+local group = vim.api.nvim_create_augroup("ProjectSession", { clear = true })
+
+vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = group,
+    callback = function()
+        vim.cmd("silent! wall")
+        vim.cmd("silent! mksession! " .. vim.fn.fnameescape(session_file()))
+    end,
+})
+
+vim.api.nvim_create_autocmd("VimEnter", {
+    group = group,
+    nested = true,
+    callback = function()
+        -- `nvim file.txt` のときは勝手にsessionを復元しない
+        if vim.fn.argc() > 0 then
+            return
+        end
+
+        local file = session_file()
+        if vim.fn.filereadable(file) == 1 then
+            vim.cmd("silent! source " .. vim.fn.fnameescape(file))
+        end
+    end,
+})
+
 -- cabbrev ではなく、Enter 時にコマンド全体を見る
 -- これなら :q! や :qa! に誤爆しない
 vim.keymap.set("c", "<CR>", function()
@@ -579,6 +627,12 @@ require("lazy").setup({
             "DiffviewRefresh",
             "DiffviewToggleFiles",
         },
+    },
+    -- operator + s (surround) + mosionでオペレーターにsを1文字追加すると、そのテキストオブジェクトの後にも追加される？
+    {
+        "kylechui/nvim-surround",
+        version = "^4.0.0",
+        event = "VeryLazy",
     },
 
     -- 日本語ヘルプ
