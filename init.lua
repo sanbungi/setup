@@ -343,6 +343,78 @@ require("lazy").setup({
                 },
             })
 
+            -- Rust Analyzer専用設定
+            vim.lsp.config("rust_analyzer", {
+                settings = {
+                    ["rust-analyzer"] = {
+                        cargo = {
+                            buildScripts = { enable = true },
+                            allTargets = true,
+                        },
+                        procMacro = { enable = true },
+                        check = {
+                            command = "clippy",
+                        },
+                        inlayHints = {
+                            typeHints = {
+                                enable = true,
+                                hideNamedConstructor = false,
+                                hideClosureParameter = false,
+                            },
+                            parameterHints = { enable = true },
+                            chainingHints = { enable = true },
+                            closureReturnTypeHints = { enable = "with_block" },
+                            lifetimeElisionHints = {
+                                enable = "skip_trivial",
+                                useParameterNames = true,
+                            },
+                            bindingModeHints = { enable = true },
+                            expressionAdjustmentHints = { enable = "reborrow" },
+                            maxLength = 60,
+                        },
+                    },
+                },
+            })
+
+            -- rust-analyzer独自リクエストの結果を一時バッファに表示
+            local function open_rust_analyzer_result(title, lines, filetype)
+                local buf = vim.api.nvim_create_buf(false, true)
+                vim.bo[buf].bufhidden = "wipe"
+                vim.bo[buf].filetype = filetype or "rust"
+                vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+                vim.bo[buf].modifiable = false
+                vim.cmd("botright split")
+                vim.api.nvim_win_set_buf(0, buf)
+                vim.api.nvim_buf_set_name(buf, title)
+            end
+
+            local function rust_expand_macro(bufnr)
+                local client = vim.lsp.get_clients({ bufnr = bufnr, name = "rust_analyzer" })[1]
+                if not client then
+                    vim.notify("rust-analyzer is not attached", vim.log.levels.WARN)
+                    return
+                end
+
+                local params = vim.lsp.util.make_position_params(0, client.offset_encoding)
+                client:request("rust-analyzer/expandMacro", params, function(err, result)
+                    if err then
+                        vim.notify(err.message or tostring(err), vim.log.levels.ERROR)
+                        return
+                    end
+                    if not result or not result.expansion then
+                        vim.notify("No macro expansion at cursor", vim.log.levels.INFO)
+                        return
+                    end
+
+                    local name = result.name or "macro"
+                    open_rust_analyzer_result(
+                        "rust-analyzer://expand-macro/" .. name,
+                        vim.split(result.expansion, "\n", { plain = true }),
+                        "rust"
+                    )
+                end, bufnr)
+            end
+
             -- サーバーを有効化
             local servers = {
                 "ts_ls",
@@ -364,6 +436,7 @@ require("lazy").setup({
             vim.api.nvim_create_autocmd("LspAttach", {
                 callback = function(args)
                     local bufnr = args.buf
+                    local client = vim.lsp.get_client_by_id(args.data.client_id)
 
                     -- 定義ジャンプ
                     keymap("n", "<leader>df", vim.lsp.buf.definition, { buffer = bufnr, silent = true })
@@ -450,6 +523,60 @@ require("lazy").setup({
                         vim.lsp.buf.signature_help,
                         { buffer = bufnr, silent = true, desc = "Signature help" }
                     )
+
+                    -- Rust固有機能
+                    if vim.bo[bufnr].filetype == "rust" then
+                        -- 変数型・引数名・メソッドチェーンなどのインレイヒント
+                        if client and client:supports_method("textDocument/inlayHint") then
+                            vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+                        end
+
+                        keymap("n", "<leader>th", function()
+                            local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr })
+                            vim.lsp.inlay_hint.enable(not enabled, { bufnr = bufnr })
+                        end, {
+                            buffer = bufnr,
+                            silent = true,
+                            desc = "Rust: toggle type/inlay hints",
+                        })
+
+                        -- カーソル位置の型・ドキュメントを表示
+                        keymap("n", "<leader>rt", vim.lsp.buf.hover, {
+                            buffer = bufnr,
+                            silent = true,
+                            desc = "Rust: show type/documentation",
+                        })
+
+                        -- 型そのものの定義へ移動
+                        keymap("n", "<leader>rT", vim.lsp.buf.type_definition, {
+                            buffer = bufnr,
+                            silent = true,
+                            desc = "Rust: go to type definition",
+                        })
+
+                        -- カーソル位置のマクロを再帰展開
+                        keymap("n", "<leader>rm", function()
+                            rust_expand_macro(bufnr)
+                        end, {
+                            buffer = bufnr,
+                            silent = true,
+                            desc = "Rust: expand macro",
+                        })
+
+                        -- import追加、match arm生成、derive追加など
+                        keymap("n", "<leader>ra", vim.lsp.buf.code_action, {
+                            buffer = bufnr,
+                            silent = true,
+                            desc = "Rust: code action",
+                        })
+
+                        -- 実装一覧（trait実装やメソッド実装へ）
+                        keymap("n", "<leader>ri", vim.lsp.buf.implementation, {
+                            buffer = bufnr,
+                            silent = true,
+                            desc = "Rust: go to implementation",
+                        })
+                    end
                 end,
             })
 
