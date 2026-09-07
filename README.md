@@ -12,6 +12,23 @@ https://github.com/user-attachments/assets/88591fe0-68d1-47ab-b0bc-ef55b4f6b1c6
 
 ※ Debian/Ubuntu と Fedora(dnf) 環境に対応
 
+## 非対話モードと事前チェック
+
+タスクIDを指定すると、対話UIを使わずに対象だけを実行できます。
+
+```bash
+./setup_tool --list
+./setup_tool --task rust --task tmux
+```
+
+`--check` を付けるとインストールや設定変更は行わず、必要コマンド、固定URL、
+Git取得先などの事前条件だけを確認します。リポジトリ内で実行する場合は次のように指定します。
+
+```bash
+./setup_tool --check --task neovim --source-dir "$PWD"
+./setup_tool --check --all --source-dir "$PWD"
+```
+
 ## セットアップ出来るもの
 
 - neovimのLTSをソースからビルド

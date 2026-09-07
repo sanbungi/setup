@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
+if preflight_requested "$@"; then
+  preflight_package_manager
+  preflight_commands git sudo
+  preflight_git https://github.com/neovim/neovim.git refs/tags/stable
+  exit 0
+fi
+
 if command -v apt &> /dev/null; then
   sudo apt update
   sudo apt install -y ninja-build gettext cmake unzip curl build-essential ripgrep

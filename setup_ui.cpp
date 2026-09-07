@@ -1,348 +1,234 @@
 #include <ncursesw/ncurses.h>
 #include <locale.h>
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cstdlib>
-#include <unistd.h>
-#include <cstring>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-// メニュー項目の構造体
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <vector>
+
 struct MenuItem {
+    std::string id;
     std::string label;
+    std::string script;
     bool selected;
 };
 
-// コマンド実行ヘルパー
-// 戻り値: 成功(0)なら true, 失敗なら false
 bool run_command(const std::string& cmd) {
     int ret = std::system(cmd.c_str());
-    if (ret == -1) return false;
-    return (WEXITSTATUS(ret) == 0);
+    return ret != -1 && WIFEXITED(ret) && WEXITSTATUS(ret) == 0;
 }
 
-// 画面描画関数
+std::string shell_quote(const std::string& value) {
+    std::string quoted = "'";
+    for (char c : value) {
+        if (c == '\'') quoted += "'\\''";
+        else quoted += c;
+    }
+    return quoted + "'";
+}
+
+void print_usage(const char* program) {
+    std::cout
+        << "Usage: " << program << " [--all | --task ID ...] [--check] [--source-dir PATH]\n"
+        << "       " << program << " --list\n"
+        << "Without selection arguments, the interactive menu is opened.\n";
+}
+
 void draw_menu(const std::vector<MenuItem>& items, int highlight) {
     clear();
     int h, w;
     getmaxyx(stdscr, h, w);
-
-    // タイトル
     std::string title = "=== Environment Setup Wizard ===";
     attron(COLOR_PAIR(1) | A_BOLD);
     mvprintw(1, (w - 40) / 2, "%s", title.c_str());
     attroff(COLOR_PAIR(1) | A_BOLD);
-
-    // 操作説明
     mvprintw(3, 2, "Space: Toggle | Enter: Run | q: Quit");
 
-    // リスト描画
     for (size_t i = 0; i < items.size(); ++i) {
-        int y = 5 + i;
-        if (i == highlight) {
-            attron(A_REVERSE);
-        }
-
-        // [x] or [ ]
+        int y = 5 + static_cast<int>(i);
+        if (static_cast<int>(i) == highlight) attron(A_REVERSE);
         mvprintw(y, 4, "[%c] %s", items[i].selected ? 'x' : ' ', items[i].label.c_str());
-
-        if (i == highlight) {
-            attroff(A_REVERSE);
-        }
+        if (static_cast<int>(i) == highlight) attroff(A_REVERSE);
     }
-
-    // フッター
     attron(COLOR_PAIR(2));
     mvprintw(h - 2, 2, "Target: Debian/Ubuntu/Fedora (apt or dnf)");
     attroff(COLOR_PAIR(2));
-
     refresh();
 }
 
-int main(int argc, char* argv[]) {
-    // 1. 日本語ロケール設定 (必須)
-    setlocale(LC_ALL, "");
+int find_task(const std::vector<MenuItem>& items, const std::string& id) {
+    for (size_t i = 0; i < items.size(); ++i) {
+        if (items[i].id == id) return static_cast<int>(i);
+    }
+    return -1;
+}
 
-    // 2. ホームディレクトリの取得
+int main(int argc, char* argv[]) {
+    setlocale(LC_ALL, "");
     const char* home_env = std::getenv("HOME");
     if (!home_env) {
-        std::cerr << "Error: HOME environment variable is not set." << std::endl;
+        std::cerr << "Error: HOME environment variable is not set.\n";
         return 1;
     }
-    std::string home_dir = std::string(home_env);
+    std::string home_dir(home_env);
 
-    // 3. メニュー項目の定義
     std::vector<MenuItem> items = {
-        {"Build Neovim (LTS) from source", false},
-        {"Build Screen from source", false},
-        {"Install Node.js & npm (via n)", false},
-        {"Install Ruby & gem (via rbenv)", false},
-        {"Install Golang (from package repo) & LSP", false},
-        {"Install D language (DMD/DUB)", false},
-        {"Install Rust (via rustup)", false},
-        {"Install Docker (via get.docker.com)", false},
-        {"Install tmux (terminal multiplexer)", false},
-        {"Install AtCoder tools (acc + oj; requires Node.js)", false},
-        {"Overwrite config files (nvim, screen, tmux, bash)", false},
+        {"neovim", "Build Neovim (LTS) from source", "build_nvim_lts.sh", false},
+        {"screen", "Build Screen from source", "build_screen.sh", false},
+        {"nodejs", "Install Node.js & npm (via n)", "install_nodejs.sh", false},
+        {"ruby", "Install Ruby & gem (via rbenv)", "install_ruby.sh", false},
+        {"golang", "Install Golang (from package repo) & LSP", "install_golang.sh", false},
+        {"dlang", "Install D language (DMD/DUB)", "install_dlang.sh", false},
+        {"rust", "Install Rust (via rustup)", "install_rust.sh", false},
+        {"docker", "Install Docker (via get.docker.com)", "install_docker.sh", false},
+        {"tmux", "Install tmux (terminal multiplexer)", "install_tmux.sh", false},
+        {"atcoder", "Install AtCoder tools (acc + oj; requires Node.js)", "install_atcoder_tools.sh", false},
+        {"config", "Overwrite config files (nvim, screen, tmux, bash)", "copy_setting.sh", false},
     };
 
-    bool auto_mode = false;
-    bool execute = false;
+    bool check_mode = false;
+    bool explicit_selection = false;
+    bool list_only = false;
+    std::string source_dir;
 
-    // --- 引数チェック (--all で自動実行モード) ---
-    if (argc > 1 && std::strcmp(argv[1], "--all") == 0) {
-        auto_mode = true;
-        execute = true;
-        for (auto &item : items) {
-            item.selected = true;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "--all") {
+            explicit_selection = true;
+            for (auto& item : items) item.selected = true;
+        } else if (arg == "--task") {
+            if (++i >= argc) {
+                std::cerr << "Error: --task requires an ID.\n";
+                return 2;
+            }
+            int index = find_task(items, argv[i]);
+            if (index < 0) {
+                std::cerr << "Error: unknown task ID: " << argv[i] << '\n';
+                return 2;
+            }
+            items[index].selected = true;
+            explicit_selection = true;
+        } else if (arg == "--check") {
+            check_mode = true;
+        } else if (arg == "--source-dir") {
+            if (++i >= argc) {
+                std::cerr << "Error: --source-dir requires a path.\n";
+                return 2;
+            }
+            source_dir = argv[i];
+        } else if (arg == "--list") {
+            list_only = true;
+        } else if (arg == "--help" || arg == "-h") {
+            print_usage(argv[0]);
+            return 0;
+        } else {
+            std::cerr << "Error: unknown argument: " << arg << '\n';
+            print_usage(argv[0]);
+            return 2;
         }
-        std::cout << "=== Auto-mode (--all) detected: Running all tasks ===" << std::endl;
     }
 
-    // --- UIモード (自動モードでない場合) ---
-    if (!auto_mode) {
+    if (list_only) {
+        for (const auto& item : items) std::cout << item.id << '\t' << item.label << '\n';
+        return 0;
+    }
+    if (check_mode && !explicit_selection) {
+        std::cerr << "Error: --check requires --all or at least one --task.\n";
+        return 2;
+    }
+
+    bool execute = explicit_selection;
+    if (!explicit_selection) {
         initscr();
         cbreak();
         noecho();
         keypad(stdscr, TRUE);
         curs_set(0);
-
         if (has_colors()) {
             start_color();
             init_pair(1, COLOR_CYAN, COLOR_BLACK);
             init_pair(2, COLOR_YELLOW, COLOR_BLACK);
         }
-
         int highlight = 0;
-
         while (true) {
             draw_menu(items, highlight);
             int c = getch();
-
-            switch (c) {
-                case KEY_UP:
-                    if (highlight > 0) highlight--;
-                    break;
-                case KEY_DOWN:
-                    if (highlight < items.size() - 1) highlight++;
-                    break;
-                case ' ':
-                    items[highlight].selected = !items[highlight].selected;
-                    break;
-                case 10:
-                    execute = true;
-                    goto end_ui;
-                case 'q':
-                    execute = false;
-                    goto end_ui;
-            }
+            if (c == KEY_UP && highlight > 0) --highlight;
+            else if (c == KEY_DOWN && highlight < static_cast<int>(items.size()) - 1) ++highlight;
+            else if (c == ' ') items[highlight].selected = !items[highlight].selected;
+            else if (c == 10) { execute = true; break; }
+            else if (c == 'q') { execute = false; break; }
         }
-        end_ui:
         endwin();
     }
 
     if (!execute) {
-        std::cout << "Operation cancelled." << std::endl;
+        std::cout << "Operation cancelled.\n";
         return 0;
     }
 
-    // AtCoder CLI depends on Node.js. Keep dependency execution ahead of it.
-    if (items[9].selected &&
-        (!run_command("command -v node > /dev/null") ||
-         !run_command("command -v npm > /dev/null"))) {
-        items[2].selected = true;
+    int node_index = find_task(items, "nodejs");
+    int atcoder_index = find_task(items, "atcoder");
+    if (items[atcoder_index].selected &&
+        (check_mode || !run_command("command -v node >/dev/null && command -v npm >/dev/null"))) {
+        items[node_index].selected = true;
     }
 
-    std::cout << "\n=== Starting Setup Process ===\n" << std::endl;
-
-    // 1. システム要件チェック (apt/dnf)
-    std::string pkg_manager;
-    if (run_command("command -v apt > /dev/null")) {
-        pkg_manager = "apt";
-    } else if (run_command("command -v dnf > /dev/null")) {
-        pkg_manager = "dnf";
-    } else {
-        std::cerr << "[Error] apt or dnf not found." << std::endl;
-        return 1;
-    }
-
-    // 2. Gitの確認とインストール
-    std::cout << "[System] Checking Git environment..." << std::endl;
-    if (!run_command("command -v git > /dev/null")) {
-        std::cout << "[System] Installing Git..." << std::endl;
-        std::string install_git_cmd = pkg_manager == "apt"
-            ? "sudo apt update && sudo apt install -y git"
-            : "sudo dnf install -y git";
-        if (!run_command(install_git_cmd)) {
-            std::cerr << "[Error] Failed to install Git." << std::endl;
+    bool remove_source_dir = false;
+    if (check_mode) {
+        if (source_dir.empty()) source_dir = ".";
+    } else if (source_dir.empty()) {
+        source_dir = home_dir + "/setup";
+        if (run_command("[ -d " + shell_quote(source_dir) + " ]")) {
+            std::cout << "[Git] Removing existing 'setup' directory and re-cloning...\n";
+            if (!run_command("rm -rf -- " + shell_quote(source_dir))) {
+                std::cerr << "[Error] Failed to remove existing setup directory.\n";
+                return 1;
+            }
+        }
+        std::cout << "[Git] Cloning from GitHub...\n";
+        if (!run_command("git clone https://github.com/Pikka2048/setup " + shell_quote(source_dir))) {
+            std::cerr << "[Error] git clone failed.\n";
             return 1;
         }
-    }
-    std::cout << "[OK] Git is ready." << std::endl;
-
-    // 3. リポジトリのクローン
-    std::string setup_dir = home_dir + "/setup";
-
-    // 既存ディレクトリの削除
-    if (run_command("[ -d \"" + setup_dir + "\" ]")) {
-        std::cout << "[Git] Removing existing 'setup' directory and re-cloning..." << std::endl;
-        run_command("rm -rf " + setup_dir);
+        remove_source_dir = true;
     }
 
-    std::cout << "[Git] Cloning from GitHub..." << std::endl;
-    if (!run_command("git clone https://github.com/Pikka2048/setup " + setup_dir)) {
-        std::cerr << "[Error] git clone failed." << std::endl;
-        return 1;
+    struct stat source_stat {};
+    if (stat(source_dir.c_str(), &source_stat) != 0 || !S_ISDIR(source_stat.st_mode) ||
+        chdir(source_dir.c_str()) != 0) {
+        std::cerr << "[Error] Invalid source directory: " << source_dir << '\n';
+        return 2;
     }
 
-    // ディレクトリ移動
-    if (chdir(setup_dir.c_str()) != 0) {
-        std::cerr << "[Error] Failed to change directory to 'setup'." << std::endl;
-        return 1;
-    }
-    std::cout << "[OK] Clone complete. Executing selected tasks.\n" << std::endl;
-
-    // 4. 選択タスクの実行
-
-    // --- Task 1: Neovim ---
-    if (items[0].selected) {
-        std::cout << "\n>>> [Task] Building Neovim (LTS)..." << std::endl;
-        if (run_command("bash build_nvim_lts.sh")) {
-            std::cout << ">>> [Success] Neovim build finished." << std::endl;
+    std::cout << (check_mode ? "=== Starting Preflight Checks ===" : "=== Starting Setup Process ===")
+              << std::endl;
+    bool failed = false;
+    for (const auto& item : items) {
+        if (!item.selected) {
+            std::cout << "--- [Skip] " << item.id << '\n';
+            continue;
+        }
+        std::cout << ">>> [" << (check_mode ? "Check" : "Task") << "] " << item.id << std::endl;
+        std::string command = "bash " + shell_quote(item.script);
+        if (check_mode) command += " --check";
+        if (run_command(command)) {
+            std::cout << ">>> [Success] " << item.id << '\n';
         } else {
-            std::cerr << ">>> [Error] Neovim build failed." << std::endl;
+            std::cerr << ">>> [Error] " << item.id << " failed.\n";
+            failed = true;
         }
-    } else {
-        std::cout << "--- [Skip] Neovim" << std::endl;
     }
 
-    // --- Task 2: Screen ---
-    if (items[1].selected) {
-        std::cout << "\n>>> [Task] Building Screen..." << std::endl;
-        if (run_command("bash build_screen.sh")) {
-            std::cout << ">>> [Success] Screen build finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] Screen build failed." << std::endl;
+    if (remove_source_dir) {
+        if (chdir(home_dir.c_str()) != 0 || !run_command("rm -rf -- " + shell_quote(source_dir))) {
+            std::cerr << "[Error] Failed to clean up temporary setup directory.\n";
+            failed = true;
         }
-    } else {
-        std::cout << "--- [Skip] Screen" << std::endl;
     }
-
-    // --- Task 3: Node.js ---
-    if (items[2].selected) {
-        std::cout << "\n>>> [Task] Installing Node.js..." << std::endl;
-        if (run_command("bash install_nodejs.sh")) {
-            std::cout << ">>> [Success] Node.js installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] Node.js installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] Node.js" << std::endl;
-    }
-
-    // --- Task 4: Ruby ---
-    if (items[3].selected) {
-        std::cout << "\n>>> [Task] Installing Ruby..." << std::endl;
-        if (run_command("bash install_ruby.sh")) {
-            std::cout << ">>> [Success] Ruby installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] Ruby installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] Ruby" << std::endl;
-    }
-
-    // --- Task 5: Golang ---
-    if (items[4].selected) {
-        std::cout << "\n>>> [Task] Installing Golang..." << std::endl;
-        if (run_command("bash install_golang.sh")) {
-            std::cout << ">>> [Success] Golang installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] Golang installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] Golang" << std::endl;
-    }
-
-    // --- Task 6: D language ---
-    if (items[5].selected) {
-        std::cout << "\n>>> [Task] Installing D language..." << std::endl;
-        if (run_command("bash install_dlang.sh")) {
-            std::cout << ">>> [Success] D language installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] D language installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] D language" << std::endl;
-    }
-
-    // --- Task 7: Rust ---
-    if (items[6].selected) {
-        std::cout << "\n>>> [Task] Installing Rust..." << std::endl;
-        if (run_command("bash install_rust.sh")) {
-            std::cout << ">>> [Success] Rust installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] Rust installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] Rust" << std::endl;
-    }
-
-    // --- Task 8: Docker ---
-    if (items[7].selected) {
-        std::cout << "\n>>> [Task] Installing Docker..." << std::endl;
-        if (run_command("bash install_docker.sh")) {
-            std::cout << ">>> [Success] Docker installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] Docker installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] Docker" << std::endl;
-    }
-
-    // --- Task 9: tmux ---
-    if (items[8].selected) {
-        std::cout << "\n>>> [Task] Installing tmux..." << std::endl;
-        if (run_command("bash install_tmux.sh")) {
-            std::cout << ">>> [Success] tmux installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] tmux installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] tmux" << std::endl;
-    }
-
-    // --- Task 10: AtCoder tools ---
-    if (items[9].selected) {
-        std::cout << "\n>>> [Task] Installing AtCoder tools (acc + oj)..." << std::endl;
-        if (run_command("bash install_atcoder_tools.sh")) {
-            std::cout << ">>> [Success] AtCoder tools installation finished." << std::endl;
-        } else {
-            std::cerr << ">>> [Error] AtCoder tools installation failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] AtCoder tools" << std::endl;
-    }
-
-    // --- Task 11: Config Files ---
-    if (items[10].selected) {
-        std::cout << "\n>>> [Task] Copying configuration files..." << std::endl;
-        if (run_command("bash copy_setting.sh")){
-            std::cout << ">>> [Success] Setting files copy finished." << std::endl;
-        } else{
-            std::cerr << ">>> [Error] Setting files copy failed." << std::endl;
-        }
-    } else {
-        std::cout << "--- [Skip] Config Files" << std::endl;
-    }
-
-    // 5. クリーンアップ
-    std::cout << "\n[Cleanup] Removing temporary directory..." << std::endl;
-    chdir(home_dir.c_str()); // ホームに戻る
-    run_command("rm -rf " + setup_dir);
-
-    std::cout << "\n=== All processes finished ===" << std::endl;
-
-    return 0;
+    std::cout << (check_mode ? "=== Preflight Checks Finished ===\n" : "=== All Processes Finished ===\n");
+    return failed ? 1 : 0;
 }

@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
+if preflight_requested "$@"; then
+  preflight_package_manager
+  preflight_commands curl sudo gpasswd sg
+  preflight_http https://get.docker.com
+  exit 0
+fi
+
 curl -fsSL https://get.docker.com -o get-docker.sh
 
 sudo sh get-docker.sh

@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
+if preflight_requested "$@"; then
+  preflight_package_manager
+  preflight_commands curl sudo
+  preflight_http https://dlang.org/install.sh
+  exit 0
+fi
+
 if command -v apt &> /dev/null; then
   sudo apt update
   sudo apt install -y curl ca-certificates xz-utils unzip

@@ -1,6 +1,19 @@
 #!/bin/bash
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
+if preflight_requested "$@"; then
+  preflight_commands cp grep
+  for setting_file in init.lua coc-settings.json .screenrc .tmux.conf .bash_aliases .bash_functions; do
+    if [ ! -r "$setting_file" ]; then
+      echo "[Error] required setting file is not readable: $setting_file" >&2
+      exit 1
+    fi
+  done
+  echo "[Check] configuration source files are readable."
+  exit 0
+fi
+
 mkdir -p ~/.config/nvim
 cp init.lua ~/.config/nvim/
 cp coc-settings.json ~/.config/nvim/

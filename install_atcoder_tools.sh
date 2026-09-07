@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
+if preflight_requested "$@"; then
+  preflight_package_manager
+  preflight_commands node npm sudo python3
+  exit 0
+fi
+
 INSTALL_ROOT="$HOME/.local/share/atcoder-tools"
 NPM_ROOT="$INSTALL_ROOT/npm"
 OJ_VENV="$INSTALL_ROOT/oj"

@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
+if preflight_requested "$@"; then
+  preflight_package_manager
+  preflight_commands git sudo
+  preflight_git https://github.com/rbenv/rbenv.git
+  preflight_git https://github.com/rbenv/ruby-build.git
+  exit 0
+fi
+
 if command -v apt &> /dev/null; then
   sudo apt update
   sudo apt install -y libssl-dev libreadline-dev zlib1g-dev autoconf bison build-essential libyaml-dev libreadline-dev libncurses5-dev libffi-dev libgdbm-dev

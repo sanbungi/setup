@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
+if preflight_requested "$@"; then
+  preflight_package_manager
+  preflight_commands curl sudo
+  preflight_http https://ftp.jaist.ac.jp/pub/GNU/screen/screen-5.0.1.tar.gz
+  exit 0
+fi
+
 if command -v apt &> /dev/null; then
   sudo apt update
   sudo apt install -y build-essential libncurses-dev libpam0g-dev
