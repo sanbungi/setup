@@ -177,24 +177,28 @@ int main(int argc, char* argv[]) {
         items[node_index].selected = true;
     }
 
-    bool remove_source_dir = false;
+    std::string cleanup_dir;
     if (check_mode) {
         if (source_dir.empty()) source_dir = ".";
     } else if (source_dir.empty()) {
-        source_dir = home_dir + "/setup";
-        if (run_command("[ -d " + shell_quote(source_dir) + " ]")) {
-            std::cout << "[Git] Removing existing 'setup' directory and re-cloning...\n";
-            if (!run_command("rm -rf -- " + shell_quote(source_dir))) {
-                std::cerr << "[Error] Failed to remove existing setup directory.\n";
-                return 1;
-            }
-        }
-        std::cout << "[Git] Cloning from GitHub...\n";
-        if (!run_command("git clone https://github.com/Pikka2048/setup " + shell_quote(source_dir))) {
-            std::cerr << "[Error] git clone failed.\n";
+        char temp_template[] = "/tmp/setup-tool.XXXXXX";
+        char* temp_root = mkdtemp(temp_template);
+        if (!temp_root) {
+            std::cerr << "[Error] Failed to create a temporary directory.\n";
             return 1;
         }
-        remove_source_dir = true;
+        cleanup_dir = temp_root;
+        source_dir = cleanup_dir + "/setup";
+        const char* repository_env = std::getenv("SETUP_REPOSITORY_URL");
+        std::string repository_url = repository_env
+            ? repository_env
+            : "https://github.com/Pikka2048/setup";
+        std::cout << "[Git] Cloning from GitHub...\n";
+        if (!run_command("git clone " + shell_quote(repository_url) + " " + shell_quote(source_dir))) {
+            std::cerr << "[Error] git clone failed.\n";
+            run_command("rm -rf -- " + shell_quote(cleanup_dir));
+            return 1;
+        }
     }
 
     struct stat source_stat {};
@@ -223,9 +227,13 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (remove_source_dir) {
+    if (!cleanup_dir.empty()) {
         if (chdir(home_dir.c_str()) != 0 || !run_command("rm -rf -- " + shell_quote(source_dir))) {
             std::cerr << "[Error] Failed to clean up temporary setup directory.\n";
+            failed = true;
+        }
+        if (!run_command("rmdir -- " + shell_quote(cleanup_dir))) {
+            std::cerr << "[Error] Failed to remove temporary parent directory.\n";
             failed = true;
         }
     }

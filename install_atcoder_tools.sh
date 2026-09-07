@@ -4,7 +4,18 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/preflight.sh"
 if preflight_requested "$@"; then
   preflight_package_manager
-  preflight_commands node npm sudo python3
+  preflight_commands node npm python3
+
+  CHECK_ROOT="$(mktemp -d /tmp/atcoder-tools-check.XXXXXX)"
+  trap 'rm -rf "$CHECK_ROOT"' EXIT
+  mkdir -p "$CHECK_ROOT/home"
+  HOME="$CHECK_ROOT/home" npm_config_cache="$CHECK_ROOT/npm-cache" \
+    npm install --silent --prefix "$CHECK_ROOT/npm" atcoder-cli
+  python3 -m venv "$CHECK_ROOT/oj"
+  HOME="$CHECK_ROOT/home" PIP_CACHE_DIR="$CHECK_ROOT/pip-cache" \
+    "$CHECK_ROOT/oj/bin/python" -m pip install --quiet --upgrade pip setuptools online-judge-tools
+  HOME="$CHECK_ROOT/home" "$CHECK_ROOT/npm/node_modules/.bin/acc" --version
+  HOME="$CHECK_ROOT/home" "$CHECK_ROOT/oj/bin/oj" --version
   exit 0
 fi
 
@@ -31,7 +42,7 @@ mkdir -p "$NPM_ROOT"
 npm install --prefix "$NPM_ROOT" atcoder-cli
 
 python3 -m venv "$OJ_VENV"
-"$OJ_VENV/bin/python" -m pip install --upgrade pip online-judge-tools
+"$OJ_VENV/bin/python" -m pip install --upgrade pip setuptools online-judge-tools
 
 PATH_LINE='export PATH="$HOME/.local/share/atcoder-tools/npm/node_modules/.bin:$HOME/.local/share/atcoder-tools/oj/bin:$PATH"'
 touch "$HOME/.bashrc"

@@ -76,4 +76,20 @@ if find "$TEST_HOME" -mindepth 1 -print -quit | grep -q .; then
   exit 1
 fi
 
+# Regression: running from $HOME/setup must never remove the current directory.
+REPOSITORY_FIXTURE="$TEST_ROOT/repository"
+mkdir -p "$REPOSITORY_FIXTURE"
+cp "$SOURCE_DIR/install_tmux.sh" "$REPOSITORY_FIXTURE/install_tmux.sh"
+git -C "$REPOSITORY_FIXTURE" init -q
+git -C "$REPOSITORY_FIXTURE" add install_tmux.sh
+git -C "$REPOSITORY_FIXTURE" -c user.name=test -c user.email=test@example.com commit -qm fixture
+mkdir -p "$TEST_HOME/setup"
+touch "$TEST_HOME/setup/must-survive"
+(
+  cd "$TEST_HOME/setup"
+  HOME="$TEST_HOME" RUN_LOG="$RUN_LOG" SETUP_REPOSITORY_URL="$REPOSITORY_FIXTURE" \
+    "$TOOL" --task tmux >/dev/null
+)
+test -f "$TEST_HOME/setup/must-survive"
+
 echo "CLI tests passed."

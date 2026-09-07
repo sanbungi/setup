@@ -22,7 +22,9 @@ https://github.com/user-attachments/assets/88591fe0-68d1-47ab-b0bc-ef55b4f6b1c6
 ```
 
 `--check` を付けるとインストールや設定変更は行わず、必要コマンド、固定URL、
-Git取得先などの事前条件だけを確認します。リポジトリ内で実行する場合は次のように指定します。
+Git取得先などの事前条件だけを確認します。AtCoderツールについては一時ディレクトリへ
+実際にパッケージを導入し、`acc`と`oj`が起動することまで確認します。
+リポジトリ内で実行する場合は次のように指定します。
 
 ```bash
 ./setup_tool --check --task neovim --source-dir "$PWD"
