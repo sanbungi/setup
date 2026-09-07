@@ -93,6 +93,17 @@ case "$CONFIRM" in
         ;;
 esac
 
+read -p "AtCoder CLIツール (acc + oj) をインストールしますか？ (Node.js必須) (y/N): " CONFIRM
+case "$CONFIRM" in
+    [yY]*)
+        echo "処理を実行します..."
+        bash install_atcoder_tools.sh
+        ;;
+    *)
+        echo "実行しません。"
+        ;;
+esac
+
 read -p "D言語(DMD/DUB)をインストールしますか？ (y/N): " CONFIRM
 case "$CONFIRM" in
     [yY]*)

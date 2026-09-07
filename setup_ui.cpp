@@ -83,6 +83,7 @@ int main(int argc, char* argv[]) {
         {"Install Rust (via rustup)", false},
         {"Install Docker (via get.docker.com)", false},
         {"Install tmux (terminal multiplexer)", false},
+        {"Install AtCoder tools (acc + oj; requires Node.js)", false},
         {"Overwrite config files (nvim, screen, tmux, bash)", false},
     };
 
@@ -144,6 +145,13 @@ int main(int argc, char* argv[]) {
     if (!execute) {
         std::cout << "Operation cancelled." << std::endl;
         return 0;
+    }
+
+    // AtCoder CLI depends on Node.js. Keep dependency execution ahead of it.
+    if (items[9].selected &&
+        (!run_command("command -v node > /dev/null") ||
+         !run_command("command -v npm > /dev/null"))) {
+        items[2].selected = true;
     }
 
     std::cout << "\n=== Starting Setup Process ===\n" << std::endl;
@@ -305,8 +313,20 @@ int main(int argc, char* argv[]) {
         std::cout << "--- [Skip] tmux" << std::endl;
     }
 
-    // --- Task 10: Config Files ---
+    // --- Task 10: AtCoder tools ---
     if (items[9].selected) {
+        std::cout << "\n>>> [Task] Installing AtCoder tools (acc + oj)..." << std::endl;
+        if (run_command("bash install_atcoder_tools.sh")) {
+            std::cout << ">>> [Success] AtCoder tools installation finished." << std::endl;
+        } else {
+            std::cerr << ">>> [Error] AtCoder tools installation failed." << std::endl;
+        }
+    } else {
+        std::cout << "--- [Skip] AtCoder tools" << std::endl;
+    }
+
+    // --- Task 11: Config Files ---
+    if (items[10].selected) {
         std::cout << "\n>>> [Task] Copying configuration files..." << std::endl;
         if (run_command("bash copy_setting.sh")){
             std::cout << ">>> [Success] Setting files copy finished." << std::endl;
